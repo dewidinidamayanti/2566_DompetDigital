@@ -5,19 +5,11 @@ plugins {
 }
 
 android {
-<<<<<<< HEAD
-    namespace = "com.example.dompetdigital"
-    compileSdk = 35
-
-    defaultConfig {
-        applicationId = "com.example.dompetdigital"
-=======
-    namespace = "com.example.a2566_dompetdigital"
+    namespace = "com.example.a2566_dompetdigital" // Choose one and remove markers
     compileSdk = 35
 
     defaultConfig {
         applicationId = "com.example.a2566_dompetdigital"
->>>>>>> 624e2b0490ba03c25f38a7dd64fe4284bb5700b1
         minSdk = 24
         targetSdk = 35
         versionCode = 1

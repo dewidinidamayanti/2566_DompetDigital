@@ -1,4 +1,4 @@
-package com.example.dompetdigital
+package com.example.a2566_dompetdigital
 
 abstract class MetodePembayaran(val namaMetode: String) {
     abstract val limitMaksimal: Double

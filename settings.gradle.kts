@@ -22,9 +22,5 @@ dependencyResolutionManagement {
     }
 }
 
-<<<<<<< HEAD
-rootProject.name = "DompetDigital"
-=======
 rootProject.name = "2566_DompetDigital"
->>>>>>> 624e2b0490ba03c25f38a7dd64fe4284bb5700b1
 include(":app")
