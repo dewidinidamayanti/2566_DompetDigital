@@ -3,71 +3,58 @@ package com.example.a2566_dompetdigital
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.withStyle
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
-import androidx.core.graphics.toColorInt
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 
 class DompetDigital {
     private var _saldo: Double = 500000.0
+    val saldo: Double get() = _saldo
 
-    val saldo: Double
-        get() = _saldo
+    // Inner Class yang memiliki akses eksklusif ke variabel private _saldo
+    inner class OtorisatorKeamanan {
+        fun eksekusiPembayaran(jumlah: Double, metode: MetodePembayaran): ResponTransaksi {
+            val total = jumlah + metode.biayaAdmin
+            val idRand = "TX-${(100000..999999).random()}"
 
-    fun lakukanTransaksi(jumlah: Double, metode: MetodePembayaran): String {
+            // Validasi limit transaksi tunggal > 2.000.000
+            if (jumlah > 2000000.0) {
+                return ResponTransaksi(idRand, jumlah, total, StatusTransaksi.LIMIT_TERLEWATI)
+            }
 
-        val totalBayar = jumlah + metode.biayaAdmin
-        
-        if (jumlah <= 0.0) {
-            return "Gagal: Nominal transaksi harus lebih dari Rp 0"
+            return if (_saldo >= total) {
+                _saldo -= total // Langsung memotong private variable induk
+                ResponTransaksi(idRand, jumlah, total, StatusTransaksi.SUKSES)
+            } else {
+                ResponTransaksi(idRand, jumlah, total, StatusTransaksi.GAGAL)
+            }
         }
-
-        if (_saldo < totalBayar) {
-            return "Gagal: Saldo tidak mencukupi untuk total Rp ${formatRupiah(totalBayar)}"
-        }
-
-        _saldo -= totalBayar
-        val hasilTransaksi = metode.prosesBayar(jumlah)
-        metode.mainkanSuaraNotifikasi()
-        
-
-        return "$hasilTransaksi (Total Bayar: Rp ${formatRupiah(totalBayar)})"
     }
 }
 
@@ -76,273 +63,312 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             MaterialTheme {
-                PolymorphicPaymentScreen()
+                StrukPembayaranScreen()
             }
         }
     }
 }
 
-@Composable
-fun PolymorphicPaymentScreen() {
-    val dompet = remember { DompetDigital() }
-    val opsiMetode = remember {
-        listOf(
-            PembayaranQris(),
-            TransferBank("BCA"),
-            TransferBank("Mandiri"),
-            PembayaranPromo()
-        )
-    }
 
-    var metodeTerpilih by remember { mutableStateOf(opsiMetode[0]) }
-    var nominal by remember { mutableStateOf("120000") }
-    var saldoTampil by remember { mutableDoubleStateOf(dompet.saldo) }
-    var statusTransaksi by remember { mutableStateOf("Belum ada transaksi") }
+//@Composable
+//fun StrukPembayaranScreen() {
+//
+//    val dompet = remember { DompetDigital() }
+//
+//    // Instansiasi objek Inner Class membutuhkan referensi dari Outer Class
+//    val otorisator = remember { dompet.OtorisatorKeamanan() }
+//    var inputNominal by remember { mutableStateOf("") }
+//    var strukHasil by remember { mutableStateOf<ResponTransaksi?>(null) }
+//    var strukDuplikat by remember { mutableStateOf<ResponTransaksi?>(null) }
+//    val metodeTerpilih = remember { PembayaranQris() } // Contoh dari Modul 10
+//
+//    Column(modifier = Modifier.padding(16.dp)) {
+//        Text(text = "Saldo Akun: Rp ${formatRupiah(dompet.saldo)}")
+//        OutlinedTextField(
+//            value = inputNominal,
+//            onValueChange = { inputNominal = it },
+//            label = { Text("Nominal Transaksi") }
+//        )
+//        Button(onClick = {
+//            val nominal = inputNominal.toDoubleOrNull() ?: 0.0
+//
+//            // Memanggil fungsi inner class untuk mendapatkan data class respon
+//            val hasil = otorisator.eksekusiPembayaran(nominal, metodeTerpilih)
+//            strukHasil = hasil
+//
+//            // Eksperimen Fungsi Salin (Copy Utility): Membuat duplikat dengan status dimanipulasi
+//            strukDuplikat = hasil.copy(status = StatusTransaksi.PENDING)
+//        }) {
+//            Text("PROSES SEKARANG")
+//        }
+//
+//        // Render struk secara kondisional memanfaatkan properti Data & Enum Class
+//        strukHasil?.let { struk ->
+//            Card(modifier = Modifier.padding(top = 16.dp)) {
+//                Column(modifier = Modifier.padding(8.dp)) {
+//                    Text(text = "STRUK ASLI", color = Color.Gray)
+//                    Text(text = "ID Transaksi: ${struk.idTransaksi}")
+//                    Text(text = "Total Bayar: Rp ${formatRupiah(struk.totalBayar)}")
+//                    // Mengambil warnaHex langsung dari properti Enum
+//                    Text(
+//                        text = "Status: ${struk.status.label}",
+//                        color = Color(android.graphics.Color.parseColor(struk.status.warnaHex))
+//                    )
+//                }
+//            }
+//        }
+//
+//        // Menampilkan hasil eksperimen copy
+//        strukDuplikat?.let { duplikat ->
+//            Card(modifier = Modifier.padding(top = 8.dp)) {
+//                Column(modifier = Modifier.padding(8.dp)) {
+//                    Text(text = "DUPLIKAT (Eksperimen .copy())", color = Color.Gray)
+//                    Text(text = "ID Transaksi: ${duplikat.idTransaksi}") // ID tetap sama
+//                    Text(text = "Status Manipulasi: ${duplikat.status.label}")
+//                }
+//            }
+//        }
+//    }
+//}
+
+@Composable
+fun StrukPembayaranScreen() {
+    val dompet = remember { DompetDigital() }
+    val otorisator = remember { dompet.OtorisatorKeamanan() }
+    var inputNominal by remember { mutableStateOf("") }
+    var strukHasil by remember { mutableStateOf<ResponTransaksi?>(null) }
+    var strukDuplikat by remember { mutableStateOf<ResponTransaksi?>(null) }
+    var saldoTampil by remember { mutableStateOf(dompet.saldo) }
+    val metodeTerpilih = remember { PembayaranQris() }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF3F5F5))
+            .background(Color(0xFFF0F2F5))
     ) {
-        PaymentHeader()
-
-        LazyColumn(
-            modifier = Modifier.fillMaxSize()
-        ) {
-            item {
-                PaymentSectionTitle()
-            }
-
-            items(opsiMetode) { metode ->
-                PaymentMethodCard(
-                    metode = metode,
-                    isSelected = metodeTerpilih == metode,
-                    onClick = { metodeTerpilih = metode }
-                )
-            }
-
-            item {
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text = "Saldo Dompet: Rp ${formatRupiah(saldoTampil)}",
-                    color = Color(0xFF1B3348),
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 6.dp)
-                )
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                Text(
-                    text = "Nominal",
-                    color = Color(0xFF1B3348),
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 6.dp)
-                )
-
-                Spacer(modifier = Modifier.height(4.dp))
-                OutlinedTextField(
-                    value = nominal,
-                    onValueChange = { nominal = it },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 6.dp),
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Number
-                    )
-                )
-
-                Spacer(modifier = Modifier.height(26.dp))
-                Button(
-                    onClick = {
-                        val jumlah = nominal.toDoubleOrNull() ?: 0.0
-                        statusTransaksi = dompet.lakukanTransaksi(jumlah, metodeTerpilih)
-                        saldoTampil = dompet.saldo
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 6.dp)
-                        .height(48.dp),
-                    shape = RoundedCornerShape(6.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF1FA58A)
-                    )
-                ) {
-                    Text(
-                        text = "PROSES TRANSAKSI",
-                        color = Color.White,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-
-                StatusTransaksiCard(statusTransaksi)
-                Spacer(modifier = Modifier.height(16.dp))
-            }
-        }
-    }
-}
-
-@Composable
-fun PaymentHeader() {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Color(0xFF1FA58A))
-            .padding(vertical = 12.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = "Smart Payment System",
-            color = Color.White,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold
-        )
-    }
-}
-
-@Composable
-fun PaymentSectionTitle() {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 6.dp, vertical = 10.dp),
-        shape = RoundedCornerShape(10.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = Color.White
-        ),
-        border = BorderStroke(1.dp, Color(0xFFD5DCE2))
-    ) {
+        // Header full width
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 18.dp),
+                .background(Color(0xFF2D3E50))
+                .padding(vertical = 16.dp),
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = "METODE PEMBAYARAN TERSEDIA",
-                color = Color(0xFF7C8A96),
-                fontSize = 14.sp
+                text = "E-Receipt Console",
+                color = Color.White,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Medium
             )
         }
-    }
-}
 
-@Composable
-fun PaymentMethodCard(
-    metode: MetodePembayaran,
-    isSelected: Boolean,
-    onClick: () -> Unit
-) {
-    val accentColor = Color(metode.warnaAksenHex.toColorInt())
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 6.dp, vertical = 6.dp)
-            .clickable { onClick() },
-        shape = RoundedCornerShape(8.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = Color.White
-        ),
-        border = if (isSelected) BorderStroke(2.dp, accentColor) else BorderStroke(1.dp, Color(0xFFD5DCE2))
-    ) {
+        // Konten scrollable
         Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp)
+                .fillMaxSize()
+                .padding(16.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+            // Saldo Card
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color(0xFF2D3E50), RoundedCornerShape(12.dp))
+                    .padding(16.dp),
+                contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = buildAnnotatedString {
-                        append(metode.namaMetode)
-                        if (isSelected) {
-                            withStyle(style = SpanStyle(color = Color.Red)) {
-                                append(" (Selected)")
-                            }
-                        }
-                    },
-                    color = accentColor,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold
-                )
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "SISA SALDO AKTIF",
+                        color = Color(0xFFA0B0C0),
+                        fontSize = 11.sp,
+                        letterSpacing = 1.sp
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Rp ${formatRupiah(saldoTampil)}",
+                        color = Color.White,
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
 
+            // Input Nominal
+            Column {
                 Text(
-                    text = "Admin: Rp ${formatRupiah(metode.biayaAdmin)}",
-                    color = Color(0xFF6B7C88),
-                    style = MaterialTheme.typography.bodySmall,
-                    fontWeight = FontWeight.SemiBold
+                    text = "Masukkan Nominal",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color(0xFF444444)
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                OutlinedTextField(
+                    value = inputNominal,
+                    onValueChange = { inputNominal = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Color(0xFF2D3E50),
+                        unfocusedBorderColor = Color(0xFFCCCCCC)
+                    )
                 )
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            // Tombol Proses
+            Button(
+                onClick = {
+                    val nominal = inputNominal.toDoubleOrNull() ?: 0.0
+                    val hasil = otorisator.eksekusiPembayaran(nominal, metodeTerpilih)
+                    strukHasil = hasil
+                    strukDuplikat = hasil.copy(status = StatusTransaksi.PENDING)
+                    saldoTampil = dompet.saldo
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
+                shape = RoundedCornerShape(8.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2D3E50))
+            ) {
+                Text(
+                    text = "PROSES SEKARANG",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    letterSpacing = 0.5.sp
+                )
+            }
 
-            Text(
-                text = metode.labelPetunjuk,
-                color = Color(0xFF6B7C88),
-                fontSize = 14.sp
-            )
+            // Struk Asli
+            strukHasil?.let { struk ->
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    border = BorderStroke(1.dp, Color(0xFFC0C8D0))
+                ) {
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        Text(
+                            text = "Rincian Struk Pembayaran",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = Color(0xFF333333),
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        HorizontalDivider(color = Color(0xFFE0E0E0))
+                        Spacer(modifier = Modifier.height(8.dp))
 
-            Spacer(modifier = Modifier.height(10.dp))
+                        StrukRow(label = "ID Transaksi", value = struk.idTransaksi, valueWeight = FontWeight.Medium)
+                        StrukRow(label = "Nominal Dasar", value = "Rp ${formatRupiah(struk.nominalAwal)}")
+                        StrukRow(label = "Biaya Penanganan", value = "Rp ${formatRupiah(struk.totalBayar - struk.nominalAwal)}")
 
-            BadgeMetode(
-                text = metode.dapatkanJenisBadge(),
-                color = accentColor
-            )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        HorizontalDivider(color = Color(0xFFE0E0E0))
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "Total Potong Saldo",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = Color(0xFF222222)
+                            )
+                            Text(
+                                text = "Rp ${formatRupiah(struk.totalBayar)}",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = Color(0xFF2980B9)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                            val badgeColor = Color(android.graphics.Color.parseColor(struk.status.warnaHex))
+                            Box(
+                                modifier = Modifier
+                                    .background(badgeColor, RoundedCornerShape(20.dp))
+                                    .padding(horizontal = 18.dp, vertical = 5.dp)
+                            ) {
+                                Text(
+                                    text = struk.status.label,
+                                    color = Color.White,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    letterSpacing = 0.5.sp
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Struk Duplikat
+            strukDuplikat?.let { duplikat ->
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    border = BorderStroke(1.dp, Color(0xFFC0C8D0))
+                ) {
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        Text(
+                            text = "Duplikat .copy() — Eksperimen",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = Color(0xFF888888),
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        HorizontalDivider(color = Color(0xFFE0E0E0))
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        StrukRow(label = "ID Transaksi", value = duplikat.idTransaksi, valueWeight = FontWeight.Medium)
+
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                            val badgeColor = Color(android.graphics.Color.parseColor(duplikat.status.warnaHex))
+                            Box(
+                                modifier = Modifier
+                                    .background(badgeColor, RoundedCornerShape(20.dp))
+                                    .padding(horizontal = 18.dp, vertical = 5.dp)
+                            ) {
+                                Text(
+                                    text = duplikat.status.label,
+                                    color = Color.White,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    letterSpacing = 0.5.sp
+                                )
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
 
 @Composable
-fun BadgeMetode(text: String, color: Color) {
-    Box(
-        modifier = Modifier
-            .background(color, RoundedCornerShape(4.dp))
-            .padding(horizontal = 8.dp, vertical = 5.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = text,
-            color = Color.White,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Bold
-        )
-    }
-}
-
-@Composable
-fun StatusTransaksiCard(statusTransaksi: String) {
-    Card(
+fun StrukRow(
+    label: String,
+    value: String,
+    valueWeight: FontWeight = FontWeight.Normal
+) {
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 6.dp, vertical = 12.dp),
-        shape = RoundedCornerShape(8.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = Color.White
-        )
+            .padding(vertical = 3.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Text(
-                text = "Status Transaksi:",
-                color = Color(0xFF1B3348),
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold
-            )
-
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = statusTransaksi,
-                color = Color(0xFF6B7C88),
-                fontSize = 13.sp
-            )
-        }
+        Text(text = label, fontSize = 12.sp, color = Color(0xFF666666))
+        Text(text = value, fontSize = 12.sp, fontWeight = valueWeight, color = Color(0xFF333333))
     }
 }
 
